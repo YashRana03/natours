@@ -1,0 +1,45 @@
+MONGODB
+
+DB --> COLLECTIONS --> DOCUMETNS
+
+MONGOSH COMMANDS:
+
+- show dbs                  --- To show the exisiting databases
+- use db_Name               --- In order to switch to/ or create a database
+- show collections          --- To show the collecitons in the current db
+- cls                       --- To clear the mongosh terminal
+- quit()                    --- To terminate mongosh
+- db.collection_name.find() --- To show all the documents in a certain collection
+
+
+CREATING DOCUMETNS:
+
+- db.collection_name.insertOne({obj1}) --- This will create one document in the collection and database chosen by    you. The argument obj1 is just a JSON object with some properties. The document is automatically given a field with the unique id identifying the document.
+
+- db.collection_name.insertMany([obj1, obj2.....]) --- Similar to the previous one but it will create as many documents has you give arguments(one for each JSON obj you pass in).
+
+READING DOCUMENTS: 
+
+- db.collection_name.find({field: value})     --- Returns all documents that have ---> field: value
+
+- db.collection_name.find({field1: valule1, field2: value2}) --- Returns all documents that fulfill the two query criteria(AND QUERING)
+
+- db.collection_name.find({ $or: [ {field1: value}, {field2: value} ] })
+
+- db.collection_name.find({ field: {$lte: 5} }) --- Returns all documents that have a certain field with a value of less than or equal to 5. -----> gte = greater than or equal, gt ----> greater than, lt -----> less than.
+
+- db.collection_name.find({field: value}, {field: 1})  --- This is a projection meaning whatever documents are found that fulfill the criteria only their name field will be shown (obvs the id as well)
+
+
+UPDATING DOCUMENTS:
+
+- db.collection_name.updateOne({field: value, ....}, {newField/exisitingField: value})   --- This updates the first document that matches the query object which is the first one. The field to be changed is in the second object and if it doesnt exist in the document it is just created.
+
+- db.collection_name.updateMany( {field: value, ....}, {newField/exisitingField: value})   ---> This updates all the documents that match the query.
+
+
+DELETE DOCUMENTS:
+
+- db.collection_name.deleteOne({field: value, ...})    --- This deletes only the first document that fulfills the query
+
+-db.collection_name.deleteMany({field: value})     --- Thise deletes all the documents that fulfill the query.
