@@ -86,11 +86,54 @@ exports.deleteTour = async (req, res) => {
 exports.createTour = async (req, res) => {
   try {
     const newTour = await Tour.create(req.body);
-    console.log(newTour);
     res.status(201).json({
       status: 'success',
       data: {
         tour: newTour,
+      },
+    });
+  } catch (err) {
+    res.status(400).json({
+      status: 'fail',
+      message: err,
+    });
+  }
+};
+
+// The following code makes use of an aggregation pipeline. THis is a multistage process through which each docoument in the colleciton is passed. This allows data processing to be done on the data
+exports.getTourStats = async (req, res) => {
+  try {
+    const stats = await Tour.aggregate([
+      // There are many different stages such as: match, group, sort etc.
+
+      // match only allows to the next stage in the pipeline the documents that follow the criteria specified
+      {
+        $match: { ratingsAverage: { $gte: 4.5 } },
+      },
+
+      // the group stage creates different documents depending on the _id key. Therefore there will be a document for each type of difficulty. Furthermore, the accumulators declared will carry out specific tasks such as sum, average, etc... on the specified fields.
+      {
+        $group: {
+          _id: '$difficulty',
+          numRatings: { $sum: '$ratingsQuantity' },
+          numTours: { $sum: 1 },
+          avgRating: { $avg: '$ratingsAverage' },
+          avgPrice: { $avg: '$price' },
+          minPrice: { $min: '$price' },
+          maxPrice: { $max: '$price' },
+        },
+      },
+
+      // The sort just puts the resulting documents from the previous stage in order using on of the fields in the documents such as avgPrice. Indeed now the documents do not have the original fields(i.e price) but only the ones delcared in the previous stage(i.e minPrice).
+      {
+        $sort: { avgPrice: 1 },
+      },
+    ]);
+
+    res.status(200).json({
+      status: 'success',
+      data: {
+        tour: stats,
       },
     });
   } catch (err) {

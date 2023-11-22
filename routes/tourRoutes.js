@@ -1,19 +1,23 @@
 const express = require('express');
-const userController = require('../controllers/tourController');
+const tourController = require('../controllers/tourController');
 
 const router = express.Router();
 
 // Checks if the id is valid if so the normal route is called, other wise an invalid request is sent
 // router.param('id', userController.checkID);
 
+// Order of the routes matters they must be carefully placed
 router
   .route('/')
-  .get(userController.getAllTours)
-  .post(userController.createTour);
+  .get(tourController.getAllTours)
+  .post(tourController.createTour);
+
+router.route('/tours-stats').get(tourController.getTourStats);
+
 router
   .route('/:id')
-  .get(userController.getTour)
-  .patch(userController.updateTour)
-  .delete(userController.deleteTour);
+  .get(tourController.getTour)
+  .patch(tourController.updateTour)
+  .delete(tourController.deleteTour);
 
 module.exports = router;
