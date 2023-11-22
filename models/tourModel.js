@@ -1,6 +1,6 @@
 const mongoose = require('mongoose');
-// eslint-disable-next-line node/no-unpublished-require, import/no-extraneous-dependencies
-const slugify = require('slugify');
+// const slugify = require('slugify');
+// const validator = require('validator');
 
 const tourSchema = mongoose.Schema(
   {
@@ -8,6 +8,15 @@ const tourSchema = mongoose.Schema(
       type: String,
       unique: true,
       required: [true, 'A tour must have a name'],
+      maxlength: [
+        40,
+        'A tour name must have less than or equal to 40 characters',
+      ],
+      minlength: [
+        10,
+        'A tour name must have greater than or equal to 10 characters',
+      ],
+      // validate: [validator.isAlpha, 'A tour name must only contain characters'],
     },
     slug: String,
 
@@ -25,11 +34,18 @@ const tourSchema = mongoose.Schema(
     difficulty: {
       type: String,
       required: [true, 'A tour must have a difficulty'],
+      // the enum contains the values that this field can take, followed by the error message if the input doesnt match any of these values
+      enum: {
+        values: ['easy', 'medium', 'difficult'],
+        message: 'Chose from: easy, medium, hard',
+      },
     },
 
     ratingsAverage: {
       type: Number,
       default: 4.5,
+      min: [1.0, 'Rating must be above or be equal to 1.0'],
+      max: [5.0, 'Rating must be below or be equal to 5.0'],
     },
 
     ratingsQuantity: {
@@ -42,7 +58,17 @@ const tourSchema = mongoose.Schema(
       required: [true, 'A tour must have a price'],
     },
 
-    priceDiscount: Number,
+    priceDiscount: {
+      type: Number,
+      validate: {
+        validator: function (val) {
+          // The this points to the current document being created. As such this would not work when updating
+          return val < this.price;
+        },
+        message:
+          'The discount price ({VALUE}) should be less than the original price.',
+      },
+    },
 
     summary: {
       type: String,
