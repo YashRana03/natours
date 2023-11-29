@@ -1,5 +1,6 @@
 const express = require('express');
 const tourController = require('../controllers/tourController');
+const authController = require('../controllers/authController');
 
 const router = express.Router();
 
@@ -9,7 +10,7 @@ const router = express.Router();
 // Order of the routes matters they must be carefully placed
 router
   .route('/')
-  .get(tourController.getAllTours)
+  .get(authController.protect, tourController.getAllTours) // This is a protected route. User must be logged in to access this resource
   .post(tourController.createTour);
 
 router.route('/tours-stats').get(tourController.getTourStats);
