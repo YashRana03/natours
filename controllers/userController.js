@@ -45,6 +45,16 @@ exports.updateMe = catchAsync(async (req, res, next) => {
   });
 });
 
+exports.deleteMe = catchAsync(async (req, res, next) => {
+  // deleting the logged in user
+  await User.findByIdAndDelete(req.user.id);
+
+  res.status(204).json({
+    status: 'success',
+    data: null,
+  });
+});
+
 exports.getUser = (req, res) => {
   res.status(500).json({
     status: 'error',
