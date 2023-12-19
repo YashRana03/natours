@@ -23,6 +23,18 @@ exports.singup = catchAsync(async (req, res, next) => {
 
   const token = singToken(newUser._id);
 
+  const cookieOptions = {
+    expires: new Date(
+      Date.now() + process.env.JWT_COOKIE_EXPIRES_IN * 24 * 60 * 60 * 1000,
+    ),
+    //secure: true, // Allows cookie to be sent only over https
+    httpOnly: true, // Makes sure that the browser cannot alter the cookie and can only send it along with requests to the server
+  };
+  if (process.env.NODE_ENV === 'production') {
+    cookieOptions.secure = true;
+  }
+  res.cookie('jwt', token, cookieOptions);
+
   res.status(201).json({
     status: 'success',
     token: token,
@@ -50,7 +62,7 @@ exports.login = catchAsync(async (req, res, next) => {
   }
   // SEND BACK TOKEN
   const token = singToken(user._id);
-
+  //res.cookie('jwt', token, cookieOptions);
   res.status(200).json({
     status: 'success',
     token,
