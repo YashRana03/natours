@@ -1,3 +1,4 @@
+const crypto = require('crypto');
 const moongose = require('mongoose');
 const validator = require('validator');
 const bcrypt = require('bcryptjs');
@@ -17,6 +18,11 @@ const userSchema = moongose.Schema({
   },
 
   photo: String,
+  role: {
+    type: String,
+    enum: ['user', 'guide', 'lead-guide', 'admin'],
+    default: 'user',
+  },
 
   password: {
     type: String,
@@ -39,6 +45,8 @@ const userSchema = moongose.Schema({
     },
   },
   passwordChangedAt: Date,
+  passwordResetToken: String,
+  passwordResetExpires: Date,
 });
 
 // Before the data is saved to the DB
@@ -50,6 +58,16 @@ userSchema.pre('save', async function (next) {
   this.password = await bcrypt.hash(this.password, 12); // 12 defines how secure the new hashed password will be
   // The passwordConfirm field is not actually needed in the DB itself. It's only required at the time of input to check perform validation
   this.passwordConfirm = undefined;
+});
+
+userSchema.pre('save', function (next) {
+  // Checking if the password has not been modified or if it is a new document (user), if so the next middleware is called
+  if (!this.isModified('password') || this.isNew) return next();
+
+  // if the password has been modified the passwordChangedAt field of the user is updated to the current time i.e the time of update
+  this.passwordChangedAt = Date.now() - 1000;
+  // Taking away 1 second ensures that the token is always created after the time stamp given by the passwordChangedAt
+  next();
 });
 
 // This instance method will be availabe to each document from the users collection
@@ -75,6 +93,23 @@ userSchema.methods.changedPasswordAfter = function (JWTTimestamp) {
   }
   // Not changed after issuing token
   return false;
+};
+
+userSchema.methods.createPasswordResetToken = function () {
+  // Generating a random token
+  const resetToken = crypto.randomBytes(32).toString('hex');
+  // hasing the token to prevent database attacks leaking data
+  this.passwordResetToken = crypto
+    .createHash('sha256')
+    .update(resetToken)
+    .digest('hex');
+
+  console.log({ resetToken }, this.passwordResetToken);
+
+  this.passwordResetExpires = Date.now() + 10 * 60 * 1000;
+
+  // the original unCrypted token is needed, as it will be sent by email to the user
+  return resetToken;
 };
 
 const User = moongose.model('User', userSchema);

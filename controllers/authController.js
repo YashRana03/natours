@@ -1,8 +1,10 @@
+const crypto = require('crypto');
 const { promisify } = require('util');
 const jwt = require('jsonwebtoken');
 const User = require('../models/userModel');
 const catchAsync = require('../utils/catchAsync');
 const AppError = require('../utils/appError');
+const sendEmail = require('../utils/email');
 
 // This creates the token specific to each user using the user id and the secret
 const singToken = (id) =>
@@ -102,6 +104,92 @@ exports.protect = catchAsync(async (req, res, next) => {
   }
 
   // IF this point is reached it means access is granted to the user
-  req.user = userTest;
+  req.user = userTest; // Adding the current user to the req object
+  console.log(userTest);
   next();
+});
+
+// Wrapper function is used to receive arguments in the middleware function. The rest parameter syntax is used to receive an indefinite number of arguments which will be stored in an array
+exports.restrictTo =
+  (...roles) =>
+  (req, res, next) => {
+    if (!roles.includes(req.user.role)) {
+      return next(
+        new AppError('You do not have permission to perform this action', 403), //403 means forbidden
+      );
+    }
+    next();
+  };
+
+exports.forgotPassword = catchAsync(async (req, res, next) => {
+  // Get user by email
+  const user = await User.findOne({ email: req.body.email });
+  if (!user) {
+    return next(new AppError('There is no user with that email address', 404));
+  }
+  // generate the random token
+
+  const resetToken = user.createPasswordResetToken();
+  // this is used to actually save the changes to the current user document that were carried out in the createPasswordResetToken method
+  await user.save({ validateBeforeSave: false }); // turning the validation off for this request otherwise the required fields will cause an error
+
+  // send back by eamil
+
+  // Creating the url where the user can reset the password
+  const resetUrl = `${req.protocol}://${req.get(
+    'host',
+  )}/api/v1/users/resetPassword/${resetToken}`;
+
+  // Message to be sent to the user by eamil containing the reset link along with the resetToken
+  const message = `Forgot your password? Send a request to ${resetUrl}. with your new password and passwordConfirm.\nIf you didn't forget your password please ignore this email`;
+
+  try {
+    sendEmail({
+      email: user.email,
+      subject: 'Your one time password reset link(expires in 10 minutes)',
+      message: message,
+    });
+
+    res.status(200).json({
+      status: 'success',
+      message: 'Reset link sent by email',
+    });
+  } catch (err) {
+    // If sending the email fails, the appropriate user fields are reset and internal server error is sent to the user
+    user.passwordResetToken = undefined;
+    user.passwordResetExpires = undefined;
+    await user.save({ validateBeforeSave: false });
+    return next(new AppError('The email could not be sent...', 500)); // Standard server error code
+  }
+});
+
+exports.resetPassword = catchAsync(async (req, res, next) => {
+  // Get user based on token
+  const hashedToeken = crypto
+    .createHash('sha256')
+    .update(req.params.token)
+    .digest('hex');
+
+  const user = await User.findOne({
+    passwordResetToken: hashedToeken,
+    passwordResetExpires: { $gt: Date.now() },
+  });
+
+  if (!user) {
+    return next(new AppError('Token is invaild or has expired', 400));
+  }
+  user.password = req.body.password;
+  user.passwordConfirm = req.body.passwordConfirm;
+  user.passwordResetToken = undefined;
+  user.passwordResetExpires = undefined;
+  await user.save();
+
+  // If token not expired and user exists set new password
+  // Update the passwordChangedAt for the user
+  // log the user in, sending JWT
+  const token = singToken(user._id);
+  res.status(200).json({
+    status: 'success',
+    token,
+  });
 });

@@ -19,6 +19,11 @@ router
   .route('/:id')
   .get(tourController.getTour)
   .patch(tourController.updateTour)
-  .delete(tourController.deleteTour);
+  // Only users that have special access(admin) will be able to delete tours
+  .delete(
+    authController.protect,
+    authController.restrictTo('admin'),
+    tourController.deleteTour,
+  );
 
 module.exports = router;
